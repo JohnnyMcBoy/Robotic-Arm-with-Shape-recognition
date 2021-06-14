@@ -1,0 +1,49 @@
+function theta=inverseKin(xt,yt,zt,r,p,y)
+
+%initialize forward matrix parameters
+C = cosd(p)*sind(y)*cosd(r) + sind(p)*sind(r);
+D = xt;
+G = sind(p)*sind(y)*cosd(r) - cosd(p)*sind(r);
+H = yt;
+I = -sind(y);
+J = cosd(y)*sind(r);
+K = cosd(y)*cosd(r);
+L = zt;
+
+%workspace boundaries
+if(xt>400|| xt<0)
+   disp("xt is out of workspace");
+   return;
+elseif(yt<-254 ||yt>254)
+   disp("yt is out of workspace");
+   return;
+elseif(zt<1 || zt>327)
+   disp("zt is out of workspace");
+end
+
+%calculate theta5
+theta5=-atan2d(J,I);
+
+%calculate theta3
+W=(L-110*K-157)/60;
+theta3=atan2d(W,sqrt(1-W^2));  
+
+%calculate theta4
+theta4=atan2d(K,sqrt(1-K^2))-theta3;    
+
+%calculate theta1
+Z=atan2d(G,C);
+T1=D-110*C-96*cosd(Z)-60*cosd(Z)*cosd(theta3);
+T2=H-110*G-96*sind(Z)-60*sind(Z)*cosd(theta3);
+theta1=atan2d(T2,T1);
+
+%calculate theta2
+theta2=Z-theta1;
+if theta2==-180
+     theta2=0;
+end
+
+%results
+theta=[theta1,theta2,theta3,theta4,theta5];
+
+end

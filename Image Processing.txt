@@ -1,0 +1,90 @@
+%reads image
+ShapeCrop = imread('robot4.png'); 
+
+%convert image from rgb to inverted binary
+I = rgb2gray(ShapeCrop);
+histogram(I); %used to determine threshold
+BW = imbinarize(I,0.375);
+J = imcomplement(BW);
+
+[B,L,n] = bwboundaries(J,'noholes');
+s = regionprops(J,'all');
+area = cat(1,s.Area);
+num = 0; %initialize number of shapes
+
+%number of shapes
+for k=1:n
+	if (area(k)>300)
+    	num = num + 1;
+	end
+end
+
+figure(1)
+imshowpair(J,I,'montage'); hold on
+for i=1:num
+     %shape measurements
+     A = s(i).Area; %Gets Area
+     P = s(i).PerimeterOld;  %Gets Perimeter
+     Scale=27; %1 inch per 27 pixels
+    
+     sideT=P/3; %gets the value of a side for a TRIANGLE from perimeter
+     sideS=P/4; %gets the value of a side for a SQUARE from perimeter
+   	 
+     CalcAT=(sideT^2)*sqrt(3)/4;  %Calculates area of TRIANGLE
+     CalcAS=sideS^2; %Calculates area of SQUARE
+    
+     %shape detection
+     if s(i).Circularity>=1
+     	text (s(i).Centroid(1),s(i).Centroid(2),'circle','color','red');
+    	XC = 16 - s(i).Centroid(1)/Scale;
+    	YC = 10 - s(i).Centroid(2)/Scale;
+    	OC = s(i).Orientation - 90;
+    	Circle = [XC,YC,OC];
+
+     elseif A*1.1>CalcAT && CalcAT>A*0.9
+    	text(s(i).Centroid(1),s(i).Centroid(2),'triangle','color','red');
+    	XT = 16 - s(i).Centroid(1)/Scale;
+    	YT = 10 - s(i).Centroid(2)/Scale;
+    	OT = s(i).Orientation - 90;
+    	Triangle = [XT,YT,OT];
+
+     elseif A*1.05>CalcAS && CalcAS>A*0.9
+    	text(s(i).Centroid(1),s(i).Centroid(2),'square','color','red');
+    	XS = 16 - s(i).Centroid(1)/Scale;
+    	YS = 10 - s(i).Centroid(2)/Scale;
+    	OS = s(i).Orientation - 90;
+    	Square = [XS,YS,OS];
+  
+   else
+    	text(s(i).Centroid(1),s(i).Centroid(2),'rectangle','color','red');
+    	XR = 16 - s(i).Centroid(1)/Scale;
+    	YR = 10 - s(i).Centroid(2)/Scale;
+    	OR = s(i).Orientation;
+    	Rectangle = [XR,YR,OR];
+     end
+end
+
+%selected inputs based on shape
+xt = XT*25.4;
+yt = YT*25.4*(-1);
+ori = OT;
+
+%Q matrix
+Q = [cosd(ori) -sind(ori) 0 xt;...
+	sind(ori) cosd(ori) 0 yt;...
+	0 0 1 25;...
+	0 0 0 1];
+
+%find position and orientation for inverse
+xx=Q(1,1);
+xy=Q(2,1);
+xz=Q(3,1);
+yz=Q(3,2);
+zz=Q(3,3);
+
+xt=Q(1,4);
+yt=Q(2,4);
+zt=Q(3,4);
+r=atan2d(yz,zz);
+p=atan2d(xy,xx);
+y=atan2d(-xz,xx*cos(p)+xy*sin(p));
